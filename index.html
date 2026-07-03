@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>반도체·삼성그룹 시그널 대시보드 PRO</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js" integrity="sha384-iU8HYtnGQ8Cy4zl7gbNMOhsDTTKX02BTXptVP/vqAWIaTfM7isw76iyZCsjL2eVi" crossorigin="anonymous"></script>
+<style>
+  :root { color-scheme: light;
+    --bg:#f7f8fa; --card:#ffffff; --border:#e5e8ee; --text:#1a2233; --sub:#6b7688;
+    --up:#d93843; --down:#2563eb; --neu:#8a93a5; --bad:#d93843; --accent:#4a5cc5;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:'Apple SD Gothic Neo','Malgun Gothic',system-ui,sans-serif; background:var(--bg); color:var(--text); padding:20px; font-size:14px; }
+  h1 { font-size:19px; margin-bottom:4px; }
+  .sub { color:var(--sub); font-size:12px; margin-bottom:10px; }
+  .macro { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:8px; margin-bottom:12px; }
+  .mbox { background:var(--card); border:1px solid var(--border); border-radius:10px; padding:9px 12px; }
+  .mbox .k { font-size:11px; color:var(--sub); }
+  .mbox .v { font-size:14px; font-weight:700; margin-top:2px; }
+  .mbox .s { font-size:11px; margin-top:1px; }
+  .regime { border-left:4px solid var(--neu); }
+  .chips { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
+  .chip { background:var(--card); border:1px solid var(--border); border-radius:20px; padding:5px 12px; font-size:12px; color:var(--sub); }
+  .chip b { color:var(--text); }
+  .disclaimer { background:#fff7e6; border:1px solid #f0dcae; border-radius:8px; padding:8px 12px; font-size:12px; color:#7a5c14; margin-bottom:14px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:10px; margin-bottom:20px; }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:14px; cursor:pointer; transition:box-shadow .15s, border-color .15s; }
+  .card:hover { box-shadow:0 2px 10px rgba(0,0,0,.07); }
+  .card.sel { border-color:var(--accent); box-shadow:0 0 0 2px rgba(74,92,197,.18); }
+  .card .nm { font-weight:700; font-size:14px; }
+  .card .tk { color:var(--sub); font-size:11px; margin-left:4px; }
+  .card .px { font-size:16px; font-weight:700; margin-top:6px; }
+  .card .chg { font-size:12px; font-weight:600; margin-left:6px; }
+  .up { color:var(--up); } .down { color:var(--down); } .neutral { color:var(--neu); }
+  .scorebar { height:6px; background:#eceef3; border-radius:3px; margin-top:10px; overflow:hidden; }
+  .scorebar>div { height:100%; border-radius:3px; }
+  .scorelbl { display:flex; justify-content:space-between; margin-top:6px; font-size:11.5px; color:var(--sub); }
+  .badge { font-weight:700; }
+  .detail { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:18px; }
+  .detail h2 { font-size:16px; margin-bottom:2px; }
+  .detail .meta { color:var(--sub); font-size:12px; margin-bottom:12px; }
+  .cols { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+  @media (max-width:760px){ .cols{grid-template-columns:1fr;} }
+  .sig { display:flex; justify-content:space-between; align-items:flex-start; padding:8px 0; border-bottom:1px solid var(--border); gap:10px; }
+  .sig:last-child { border-bottom:none; }
+  .sig .t { font-weight:600; font-size:13px; }
+  .sig .d { color:var(--sub); font-size:12px; margin-top:2px; line-height:1.45; }
+  .sig .v { font-weight:700; white-space:nowrap; font-size:13px; }
+  .sectitle { font-size:13px; font-weight:700; color:var(--sub); margin:14px 0 6px; letter-spacing:.02em; }
+  .chartbox { position:relative; height:190px; }
+  .newsitem { padding:7px 0; border-bottom:1px solid var(--border); }
+  .newsitem:last-child { border-bottom:none; }
+  .newsitem a { color:var(--text); text-decoration:none; font-size:12.5px; font-weight:600; }
+  .newsitem a:hover { text-decoration:underline; }
+  .newsitem .m { color:var(--sub); font-size:11px; margin-top:2px; }
+  .loading { color:var(--sub); font-size:12.5px; padding:10px 0; }
+  .err { color:var(--bad); font-size:12.5px; padding:8px 0; }
+  .totalrow { display:flex; align-items:center; gap:14px; margin:8px 0 2px; flex-wrap:wrap; }
+  .totalnum { font-size:30px; font-weight:800; }
+  .totaltag { font-size:13px; font-weight:700; padding:4px 12px; border-radius:20px; }
+  .tag-up { background:#fdeaec; color:var(--up); } .tag-down { background:#e8effd; color:var(--down); } .tag-neu { background:#eef0f4; color:var(--neu); }
+  .hitline { font-size:12px; color:var(--sub); margin-bottom:12px; }
+  .proxy { font-size:11px; color:var(--sub); margin-bottom:6px; }
+  .bt { background:#f6f8fb; border:1px solid var(--border); border-radius:10px; padding:12px; margin-top:6px; }
+  .bt table { width:100%; border-collapse:collapse; font-size:12.5px; }
+  .bt th, .bt td { text-align:right; padding:4px 6px; border-bottom:1px solid var(--border); }
+  .bt th:first-child, .bt td:first-child { text-align:left; }
+  .bt .note { font-size:11px; color:var(--sub); margin-top:8px; line-height:1.5; }
+  .congress { font-size:12px; }
+  .congress div { padding:5px 0; border-bottom:1px solid var(--border); }
+  .congress div:last-child { border-bottom:none; }
+  .pf { background:var(--card); border:1px solid var(--border); border-radius:12px; padding:14px; margin-bottom:14px; }
+  .pf h3 { font-size:14px; margin-bottom:8px; }
+  .pf table { width:100%; border-collapse:collapse; font-size:12.5px; }
+  .pf th, .pf td { text-align:right; padding:6px 6px; border-bottom:1px solid var(--border); white-space:nowrap; }
+  .pf th:first-child, .pf td:first-child { text-align:left; }
+  .pf input { width:90px; padding:4px 6px; border:1px solid var(--border); border-radius:6px; font-size:12px; text-align:right; }
+  .pf .sum { font-weight:700; }
+  .pf .warn { font-size:11.5px; color:#b45309; margin-top:8px; }
+  .pf .note { font-size:11px; color:var(--sub); margin-top:6px; }
+  .heldmark { font-size:10px; background:#eef1ff; color:var(--accent); border-radius:4px; padding:1px 5px; margin-left:5px; vertical-align:middle; font-weight:700; }
+</style>
+</head>
+<body>
+<h1>반도체·삼성그룹 시그널 대시보드 <span style="color:var(--accent)">PRO</span></h1>
+<div class="sub" id="updated">불러오는 중...</div>
+<div class="macro" id="macro"></div>
+<div class="chips">
+  <div class="chip">실사용 적중률 <b id="hitrate">기록 수집 중</b></div>
+  <div class="chip">장중 5분 자동 갱신</div>
+  <div class="chip">종목 선택 시 과거 백테스트 자동 실행</div>
+</div>
+<div class="disclaimer">⚠️ 판정은 공개 데이터 신호의 집계이며 투자 권유가 아닙니다. 백테스트는 과거에 대한 검증일 뿐 미래 수익을 보장하지 않습니다. 사용 방법과 투자 판단·책임은 사용자 본인에게 있습니다.</div>
+<div class="pf" id="pfbox" style="display:none"></div>
+<div class="grid" id="grid"><div class="loading">시세 불러오는 중...</div></div>
+<div class="detail" id="detail" style="display:none"></div>
+
+<script>
+const STOCKS = [
+  { sym:'005930.KS', name:'삼성전자',   krw:true,  held:true, bench:'^KS11', newsProxy:['MU','NVDA'] },
+  { sym:'000660.KS', name:'SK하이닉스', krw:true,  held:true, bench:'^KS11', newsProxy:['MU','NVDA'] },
+  { sym:'028260.KS', name:'삼성물산',   krw:true,  held:true, bench:'^KS11' },
+  { sym:'222800.KQ', name:'심텍',       krw:true,  held:true, bench:'^KS11', newsProxy:['MU','NVDA'] },
+  { sym:'058470.KQ', name:'리노공업',   krw:true,  held:true, bench:'^KS11', newsProxy:['NVDA','AMD'] },
+  { sym:'009150.KS', name:'삼성전기',   krw:true,  bench:'^KS11', newsProxy:['AAPL','NVDA'] },
+  { sym:'NVDA',      name:'엔비디아',   krw:false, bench:'SOXX' },
+  { sym:'MU',        name:'마이크론',   krw:false, bench:'SOXX' },
+  { sym:'AMD',       name:'AMD',       krw:false, bench:'SOXX' },
+  { sym:'TSM',       name:'TSMC',      krw:false, bench:'SOXX' },
+  { sym:'AVGO',      name:'브로드컴',   krw:false, bench:'SOXX' },
+];
+const BENCH = { '^KS11':'코스피', 'SOXX':'SOXX' };
+const FMP = 'mcp__0f783c43-704a-42e6-8f92-0f71896c8b49__';
+const state = { quotes:{}, hist:{}, adx:{}, intraday:{}, benchHist:{}, scores:{},
+  news:{}, ai:{}, insider:{}, congress:{}, backtest:{}, macro:{}, chart:null, sel:null };
+
+function unwrap(r){
+  if (r.isError) throw new Error(r.content && r.content[0] ? r.content[0].text.slice(0,120) : 'MCP error');
+  if (r.structuredContent) return r.structuredContent.result ?? r.structuredContent;
+  return JSON.parse(r.content[0].text);
+}
+const call = (tool,args)=> window.cowork.callMcpTool(FMP+tool, args).then(unwrap);
+const fmtPx = (v,krw)=> krw ? '₩'+Math.round(v).toLocaleString('ko-KR') : '$'+v.toLocaleString('en-US',{maximumFractionDigits:2});
+const chgCls = c => c>0.05?'up':(c<-0.05?'down':'neutral');
+const chgTxt = c => (c>0?'+':'')+c.toFixed(2)+'%';
+const dstr = d => d.toISOString().slice(0,10);
+const daysAgo = n => dstr(new Date(Date.now()-n*86400000));
+const tomorrow = ()=> dstr(new Date(Date.now()+86400000));
+const today = ()=> { const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); };
+
+// ── 통계 유틸 ──
+const avg = a => a.reduce((x,y)=>x+y,0)/a.length;
+function sma(closes, i, n){ if (i+1<n) return null; return avg(closes.slice(i-n+1, i+1)); }
+function boll(closes, i){
+  if (i+1<20) return null;
+  const w = closes.slice(i-19, i+1), m = avg(w);
+  const sd = Math.sqrt(avg(w.map(x=>(x-m)*(x-m))));
+  return { up:m+2*sd, low:m-2*sd };
+}
+
+// ── 신호 엔진 (라이브·백테스트 공용) ──
+// ctx: {price, chg, ma50, ma200, rsi, adx, bb, pos52, rel5, regime, intradayRsi, insider}
+function engine(ctx){
+  const s = [];
+  if (ctx.ma50!=null) s.push({ t:'중기 추세 (50일선)', w:1, v: ctx.price>ctx.ma50?1:-1,
+    d:`50일 이동평균 ${ctx.price>ctx.ma50?'위 — 중기 추세 유지':'아래 — 중기 추세 훼손'}` });
+  if (ctx.ma200!=null) s.push({ t:'장기 추세 (200일선)', w:1, v: ctx.price>ctx.ma200?1:-1,
+    d:`200일 이동평균 ${ctx.price>ctx.ma200?'위 — 장기 상승 국면':'아래 — 장기 하락 국면'}` });
+  if (ctx.adx!=null){
+    let v=0, d=`ADX ${ctx.adx.toFixed(1)} — 추세 약함(횡보), 추세 신호 신뢰도 낮음`;
+    if (ctx.adx>=25){ const dir = ctx.ma50!=null && ctx.price>ctx.ma50; v = dir?0.5:-0.5;
+      d = `ADX ${ctx.adx.toFixed(1)} — 강한 추세 진행 중 (${dir?'상승':'하락'} 방향)`; }
+    s.push({ t:'추세 강도 (ADX)', w:0.5, v, d });
+  }
+  if (ctx.rsi!=null){
+    let v,d;
+    if (ctx.rsi>70){ v=-1; d=`RSI ${ctx.rsi.toFixed(1)} — 과열, 단기 조정 가능성`; }
+    else if (ctx.rsi<30){ v=1; d=`RSI ${ctx.rsi.toFixed(1)} — 과매도, 기술적 반등 여지`; }
+    else if (ctx.rsi>=50){ v=0.5; d=`RSI ${ctx.rsi.toFixed(1)} — 상승 모멘텀 우위`; }
+    else { v=-0.5; d=`RSI ${ctx.rsi.toFixed(1)} — 하락 모멘텀 우위`; }
+    s.push({ t:'모멘텀 (RSI 14일)', w:1, v, d });
+  }
+  if (ctx.bb){
+    let v=0, d='볼린저밴드(20일,2σ) 내부 — 정상 범위';
+    if (ctx.price>ctx.bb.up){ v=-0.5; d='볼린저 상단 돌파 — 통계적 과열, 되돌림 주의'; }
+    else if (ctx.price<ctx.bb.low){ v=0.5; d='볼린저 하단 이탈 — 통계적 과매도, 반등 여지'; }
+    s.push({ t:'변동성 밴드 (볼린저)', w:0.5, v, d });
+  }
+  if (ctx.rel5!=null){
+    let v=0; if (ctx.rel5>2) v=0.5; else if (ctx.rel5<-2) v=-0.5;
+    s.push({ t:`상대 강도 (vs ${ctx.benchName||'지수'})`, w:0.5, v,
+      d:`최근 5거래일 지수 대비 ${ctx.rel5>0?'+':''}${ctx.rel5.toFixed(1)}%p ${v>0?'아웃퍼폼':(v<0?'언더퍼폼':'동행')}` });
+  }
+  if (ctx.pos52!=null) s.push({ t:'52주 밴드 위치', w:0.5, v: ctx.pos52>0.8?0.5:(ctx.pos52<0.2?-0.5:0),
+    d:`52주 저점~고점의 ${(ctx.pos52*100).toFixed(0)}% 지점 ${ctx.pos52>0.8?'— 고점권 강세':(ctx.pos52<0.2?'— 저점권 약세':'— 중간 지대')}` });
+  if (ctx.chg!=null) s.push({ t:'당일 수급', w:0.5, v: ctx.chg>2?0.5:(ctx.chg<-2?-0.5:0),
+    d:`당일 ${chgTxt(ctx.chg)} ${Math.abs(ctx.chg)>2?(ctx.chg>0?'— 강한 매수세':'— 강한 매도세'):'— 특이 신호 없음'}` });
+  if (ctx.regime) s.push({ t:'시장 환경 (체온계)', w:0.5, v:ctx.regime.v, d:ctx.regime.d });
+  if (ctx.intradayRsi!=null){
+    let v=0, d=`1시간봉 RSI ${ctx.intradayRsi.toFixed(1)} — 중립`;
+    if (ctx.intradayRsi<30){ v=0.5; d=`1시간봉 RSI ${ctx.intradayRsi.toFixed(1)} — 단기 눌림, 분할 진입에 유리한 타이밍 신호`; }
+    else if (ctx.intradayRsi>70){ v=-0.5; d=`1시간봉 RSI ${ctx.intradayRsi.toFixed(1)} — 단기 과열, 진입 대기 신호`; }
+    s.push({ t:'장중 타이밍 (1시간봉)', w:0.5, v, d });
+  }
+  if (ctx.insider) s.push({ t:'내부자 거래 (최근 분기)', w:0.5, v:ctx.insider.v, d:ctx.insider.d });
+  return s;
+}
+function totalScore(sigs, aiScore){
+  let sum = sigs.reduce((a,x)=>a+x.v,0);
+  let cap = sigs.reduce((a,x)=>a+x.w,0);
+  if (aiScore!=null){ sum += aiScore; cap += 1; }
+  return Math.round((sum+cap)/(2*cap)*100);
+}
+const verdict = p => p>=60?['매수 신호 우세','tag-up','var(--up)']:(p<=40?['매도 신호 우세','tag-down','var(--down)']:['관망','tag-neu','var(--neu)']);
+
+// ── 라이브 컨텍스트 ──
+function ret5(closes){ if (!closes||closes.length<6) return null;
+  const a=closes[closes.length-6], b=closes[closes.length-1]; return (b-a)/a*100; }
+function liveCtx(st){
+  const q = state.quotes[st.sym];
+  const hist = state.hist[st.sym];
+  const closes = hist?hist.map(h=>h.close):null;
+  const bh = state.benchHist[st.bench];
+  const r5 = ret5(closes), b5 = bh?ret5(bh.map(h=>h.close)):null;
+  const idr = state.intraday[st.sym];
+  return {
+    price:q.price, chg:q.changePercentage,
+    ma50:q.priceAvg50, ma200:q.priceAvg200,
+    rsi: hist&&hist.length?hist[hist.length-1].rsi:null,
+    adx: state.adx[st.sym],
+    bb: closes&&closes.length>=20?boll(closes, closes.length-1):null,
+    pos52:(q.price-q.yearLow)/(q.yearHigh-q.yearLow),
+    rel5:(r5!=null&&b5!=null)?r5-b5:null, benchName:BENCH[st.bench],
+    regime: regimeFor(st),
+    intradayRsi: idr,
+    insider: state.insider[st.sym]!==undefined?state.insider[st.sym]:null,
+  };
+}
+function regimeFor(st){
+  const m = state.macro;
+  if (!m.vix) return null;
+  let v=0; const parts=[];
+  if (m.vix.price<18){ v+=0.25; parts.push(`VIX ${m.vix.price.toFixed(1)} 안정`); }
+  else if (m.vix.price>25){ v-=0.5; parts.push(`VIX ${m.vix.price.toFixed(1)} 공포권`); }
+  else parts.push(`VIX ${m.vix.price.toFixed(1)} 보통`);
+  const bq = state.quotes[st.bench];
+  if (bq){ const above = bq.price>bq.priceAvg50; v += above?0.25:-0.25;
+    parts.push(`${BENCH[st.bench]} 50일선 ${above?'위':'아래'}`); }
+  if (m.tech!=null) parts.push(`나스닥 기술주 ${chgTxt(m.tech)}`);
+  v = Math.max(-0.5, Math.min(0.5, v));
+  return { v, d:parts.join(' · ') };
+}
+
+// ── 적중률 기록 ──
+function loadHistory(){ try { return JSON.parse(localStorage.getItem('sig_history')||'{}'); } catch(e){ return {}; } }
+function saveToday(){
+  try {
+    const h = loadHistory(); const t = today();
+    h[t] = h[t] || {};
+    for (const st of STOCKS){
+      const q = state.quotes[st.sym], sc = state.scores[st.sym];
+      if (q && sc!=null) h[t][st.sym] = { score:sc, price:q.price };
+    }
+    const keys = Object.keys(h).sort();
+    while (keys.length>120){ delete h[keys.shift()]; }
+    localStorage.setItem('sig_history', JSON.stringify(h));
+  } catch(e){}
+}
+function hitStats(symFilter){
+  const h = loadHistory(); const t = today();
+  let hit=0, n=0;
+  for (const d of Object.keys(h)){
+    if (d>=t) continue;
+    for (const sym of Object.keys(h[d])){
+      if (symFilter && sym!==symFilter) continue;
+      const rec = h[d][sym], q = state.quotes[sym];
+      if (!q || rec.score==null) continue;
+      const pred = rec.score>=60?1:(rec.score<=40?-1:0);
+      if (!pred) continue;
+      const ret = (q.price-rec.price)/rec.price;
+      if (Math.abs(ret)<0.001) continue;
+      n++; if ((pred>0&&ret>0)||(pred<0&&ret<0)) hit++;
+    }
+  }
+  return { n, rate:n?Math.round(hit/n*100):null };
+}
+
+// ── 백테스트 엔진 ──
+async function runBacktest(st){
+  if (state.backtest[st.sym]) return state.backtest[st.sym];
+  const from = daysAgo(900), to = tomorrow();
+  const [rsiArr, adxArr, benchArr] = await Promise.all([
+    call('technicalIndicators',{endpoint:'relative-strength-index', symbol:st.sym, periodLength:14, timeframe:'1day', from_date:from, to_date:to}),
+    call('technicalIndicators',{endpoint:'average-directional-index', symbol:st.sym, periodLength:14, timeframe:'1day', from_date:from, to_date:to}),
+    state.benchFull && state.benchFull[st.bench] ? Promise.resolve(state.benchFull[st.bench]) :
+      call('technicalIndicators',{endpoint:'relative-strength-index', symbol:st.bench, periodLength:14, timeframe:'1day', from_date:from, to_date:to}),
+  ]);
+  state.benchFull = state.benchFull||{}; state.benchFull[st.bench] = benchArr;
+  const asc = a => [...a].sort((x,y)=> x.date<y.date?-1:1);
+  const rows = asc(rsiArr);
+  const adxMap = {}; for (const r of asc(adxArr)) adxMap[r.date] = r.adx;
+  const bench = asc(benchArr).map(r=>({date:r.date, close:r.close}));
+  const closes = rows.map(r=>r.close);
+  const res = { buy:{n:0,hit:0,rets:[]}, sell:{n:0,hit:0,rets:[]}, hold:{n:0,rets:[]}, all:{rets:[]}, days:0, from:rows.length?rows[0].date.slice(0,10):'' };
+  let bj = 0;
+  const H = 5; // 5거래일 보유 가정
+  for (let i=210; i<rows.length-H; i++){
+    const d = rows[i].date;
+    while (bj+1<bench.length && bench[bj+1].date<=d) bj++;
+    let rel5 = null;
+    if (bj>=5 && bench[bj].date<=d && i>=5){
+      const sr = (closes[i]-closes[i-5])/closes[i-5]*100;
+      const br = (bench[bj].close-bench[bj-5].close)/bench[bj-5].close*100;
+      rel5 = sr-br;
+    }
+    const win252 = closes.slice(Math.max(0,i-251), i+1);
+    const hi = Math.max(...win252), lo = Math.min(...win252);
+    const ctx = {
+      price:closes[i], chg:(closes[i]-closes[i-1])/closes[i-1]*100,
+      ma50:sma(closes,i,50), ma200:sma(closes,i,200),
+      rsi:rows[i].rsi, adx:adxMap[d]??null, bb:boll(closes,i),
+      pos52:hi>lo?(closes[i]-lo)/(hi-lo):null, rel5, benchName:BENCH[st.bench],
+      regime:null, intradayRsi:null, insider:null,
+    };
+    const sc = totalScore(engine(ctx), null);
+    const fwd = (closes[i+H]-closes[i])/closes[i]*100;
+    res.days++; res.all.rets.push(fwd);
+    if (sc>=60){ res.buy.n++; res.buy.rets.push(fwd); if (fwd>0) res.buy.hit++; }
+    else if (sc<=40){ res.sell.n++; res.sell.rets.push(fwd); if (fwd<0) res.sell.hit++; }
+    else res.hold.rets.push(fwd);
+  }
+  state.backtest[st.sym] = res;
+  return res;
+}
+function btRow(name, n, hit, rets, hitLabel){
+  const rate = n?Math.round(hit/n*100)+'%':'—';
+  const mean = rets.length?(avg(rets)>0?'+':'')+avg(rets).toFixed(2)+'%':'—';
+  return `<tr><td>${name}</td><td>${n}</td><td>${rate}</td><td>${mean}</td></tr>`;
+}
+function renderBacktest(st, res){
+  const el = document.getElementById('btbox');
+  if (!el) return;
+  const base = res.all.rets.length?(avg(res.all.rets)>0?'+':'')+avg(res.all.rets).toFixed(2)+'%':'—';
+  el.innerHTML = `
+    <table>
+      <tr><th>판정</th><th>발생일수</th><th>적중률</th><th>평균 5일 수익률</th></tr>
+      ${btRow('매수 신호 우세', res.buy.n, res.buy.hit, res.buy.rets)}
+      ${btRow('매도 신호 우세', res.sell.n, res.sell.hit, res.sell.rets)}
+      ${btRow('관망', res.hold.rets.length, 0, res.hold.rets).replace('<td>0%</td>','<td>—</td>')}
+    </table>
+    <div class="note">검증 구간: ${res.from} ~ 현재 (${res.days}거래일) · 5거래일 보유 가정 · 전체 평균(기준선): ${base}<br>
+    매수 신호 적중률 = 신호 후 5일간 실제 상승 비율. 기준선과의 차이가 이 신호의 실제 부가가치입니다. 뉴스·시장환경·내부자 신호는 과거 데이터가 없어 백테스트에서 제외됩니다.</div>`;
+}
+
+// ── 렌더링 ──
+function renderMacro(){
+  const m = state.macro, el = document.getElementById('macro');
+  const kq = state.quotes['^KS11'], sq = state.quotes['SOXX'];
+  const boxes = [];
+  if (m.vix){
+    const lvl = m.vix.price;
+    const [txt, col] = lvl>25?['공포권 — 위험자산 축소 국면','var(--bad)']:(lvl<18?['안정 — 위험선호 국면','#0f9d58']:['보통','var(--neu)']);
+    boxes.push(`<div class="mbox regime" style="border-left-color:${col}"><div class="k">시장 체온계 (VIX)</div><div class="v">${lvl.toFixed(1)}</div><div class="s" style="color:${col}">${txt}</div></div>`);
+  }
+  if (kq) boxes.push(`<div class="mbox"><div class="k">코스피</div><div class="v">${kq.price.toLocaleString()}</div><div class="s ${chgCls(kq.changePercentage)}">${chgTxt(kq.changePercentage)}</div></div>`);
+  if (sq) boxes.push(`<div class="mbox"><div class="k">SOXX (美반도체)</div><div class="v">$${sq.price.toFixed(0)}</div><div class="s ${chgCls(sq.changePercentage)}">${chgTxt(sq.changePercentage)}</div></div>`);
+  if (m.tech!=null) boxes.push(`<div class="mbox"><div class="k">나스닥 기술주 (전일)</div><div class="v ${chgCls(m.tech)}">${chgTxt(m.tech)}</div><div class="s">섹터 평균 등락</div></div>`);
+  if (m.usdkrw) boxes.push(`<div class="mbox"><div class="k">원/달러</div><div class="v">${m.usdkrw.price.toFixed(1)}</div><div class="s ${chgCls(m.usdkrw.changePercentage)}">${chgTxt(m.usdkrw.changePercentage)} ${m.usdkrw.changePercentage>0?'(원화 약세)':'(원화 강세)'}</div></div>`);
+  if (m.t10!=null){
+    const d5 = m.t10d5!=null?(m.t10-m.t10d5):null;
+    boxes.push(`<div class="mbox"><div class="k">미국채 10년</div><div class="v">${m.t10.toFixed(2)}%</div><div class="s">${d5!=null?(d5>0?'▲':'▼')+Math.abs(d5).toFixed(2)+'%p (4일)':''} ${d5>0.1?'금리상승 — 성장주 부담':''}</div></div>`);
+  }
+  el.innerHTML = boxes.join('');
+}
+// ── 포트폴리오 (보유 종목: 수량·평단 localStorage) ──
+function loadPf(){ try { return JSON.parse(localStorage.getItem('pf_holdings')||'{}'); } catch(e){ return {}; } }
+function savePfInput(sym, field, val){
+  try {
+    const p = loadPf(); p[sym] = p[sym]||{};
+    p[sym][field] = parseFloat(String(val).replace(/,/g,''))||0;
+    localStorage.setItem('pf_holdings', JSON.stringify(p));
+  } catch(e){}
+  renderPortfolio();
+}
+function renderPortfolio(){
+  const el = document.getElementById('pfbox');
+  const held = STOCKS.filter(s=>s.held && state.quotes[s.sym]);
+  if (!held.length){ el.style.display='none'; return; }
+  el.style.display='block';
+  const p = loadPf();
+  let totVal=0, totCost=0, wScore=0, wSum=0; const weights=[];
+  const rows = held.map(st=>{
+    const q = state.quotes[st.sym], h = p[st.sym]||{};
+    const qty = h.qty||0, avgP = h.avg||0;
+    const val = qty*q.price, cost = qty*avgP;
+    const pl = (cost>0)?(val-cost):null;
+    const plPct = (cost>0)?((val/cost-1)*100):null;
+    totVal+=val; totCost+=cost;
+    const sc = state.scores[st.sym];
+    if (val>0 && sc!=null){ wScore+=sc*val; wSum+=val; weights.push({name:st.name, val}); }
+    const [lbl,,color] = sc!=null?verdict(sc):['—','','var(--neu)'];
+    return `<tr>
+      <td><b>${st.name}</b></td>
+      <td>${fmtPx(q.price,st.krw)}<div class="${chgCls(q.changePercentage)}" style="font-size:11px">${chgTxt(q.changePercentage)}</div></td>
+      <td><input inputmode="numeric" value="${qty||''}" placeholder="수량" onchange="savePfInput('${st.sym}','qty',this.value)"></td>
+      <td><input inputmode="numeric" value="${avgP||''}" placeholder="평단가" onchange="savePfInput('${st.sym}','avg',this.value)"></td>
+      <td>${val>0?'₩'+Math.round(val).toLocaleString('ko-KR'):'—'}</td>
+      <td class="${pl==null?'neutral':(pl>=0?'up':'down')}">${plPct!=null?(pl>=0?'+':'')+plPct.toFixed(1)+'%':'—'}</td>
+      <td style="color:${color};font-weight:700">${sc!=null?sc+' · '+lbl:'—'}</td>
+    </tr>`;
+  }).join('');
+  const totPl = totCost>0?(totVal/totCost-1)*100:null;
+  const pfScore = wSum>0?Math.round(wScore/wSum):null;
+  const [plbl,,pcolor] = pfScore!=null?verdict(pfScore):['—','',''];
+  let warn = '';
+  if (wSum>0){
+    const top = weights.sort((a,b)=>b.val-a.val)[0];
+    const share = top.val/wSum*100;
+    if (share>40) warn = `<div class="warn">⚠️ ${top.name} 비중이 ${share.toFixed(0)}%로 높습니다 — 개별 종목 리스크에 크게 노출되어 있어요.</div>`;
+  }
+  el.innerHTML = `<h3>내 포트폴리오 ${pfScore!=null?`<span style="color:${pcolor}">종합 ${pfScore}점 · ${plbl}</span>`:''}</h3>
+    <table>
+      <tr><th>종목</th><th>현재가</th><th>수량</th><th>평단가</th><th>평가액</th><th>손익</th><th>신호</th></tr>
+      ${rows}
+      <tr class="sum"><td>합계</td><td></td><td></td><td></td>
+        <td>${totVal>0?'₩'+Math.round(totVal).toLocaleString('ko-KR'):'—'}</td>
+        <td class="${totPl==null?'neutral':(totPl>=0?'up':'down')}">${totPl!=null?(totPl>=0?'+':'')+totPl.toFixed(1)+'%':'—'}</td><td></td></tr>
+    </table>
+    ${warn}
+    <div class="note">수량·평단가는 이 기기에만 저장됩니다. 종합 점수는 평가액 가중평균. UNICORN SK하이닉스밸류체인액티브 ETF는 데이터 소스에 없어 미포함 — 기초자산(하이닉스·밸류체인)이 위 종목들로 커버됩니다.</div>`;
+}
+function renderHitChip(){
+  const s = hitStats(null);
+  document.getElementById('hitrate').textContent = s.n?`${s.rate}% (${s.n}건)`:'수집 중 (내일부터 채점)';
+}
+function renderGrid(){
+  const g = document.getElementById('grid');
+  g.innerHTML = '';
+  for (const st of STOCKS){
+    const q = state.quotes[st.sym];
+    const el = document.createElement('div');
+    el.className = 'card'+(state.sel===st.sym?' sel':'');
+    if (!q){ el.innerHTML = `<div class="nm">${st.name}</div><div class="loading">데이터 없음</div>`; g.appendChild(el); continue; }
+    const sc = state.scores[st.sym];
+    const [lbl,,color] = sc!=null?verdict(sc):['계산 중...','',''];
+    el.innerHTML = `
+      <div><span class="nm">${st.name}</span><span class="tk">${st.sym}</span>${st.held?'<span class="heldmark">보유</span>':''}</div>
+      <div class="px">${fmtPx(q.price,st.krw)}<span class="chg ${chgCls(q.changePercentage)}">${chgTxt(q.changePercentage)}</span></div>
+      <div class="scorebar"><div style="width:${sc??0}%;background:${color||'var(--neu)'}"></div></div>
+      <div class="scorelbl"><span>${lbl}</span><span class="badge">${sc!=null?sc+'점':''}</span></div>`;
+    el.onclick = ()=>select(st.sym);
+    g.appendChild(el);
+  }
+}
+function renderDetail(){
+  const box = document.getElementById('detail');
+  const st = STOCKS.find(x=>x.sym===state.sel);
+  if (!st || !state.quotes[st.sym]){ box.style.display='none'; return; }
+  const q = state.quotes[st.sym], hist = state.hist[st.sym];
+  box.style.display = 'block';
+  const sigs = engine(liveCtx(st));
+  const ai = state.ai[st.sym];
+  const sc = totalScore(sigs, ai?ai.score:null);
+  state.scores[st.sym] = sc;
+  const [lbl,tagCls] = verdict(sc);
+  const hs = hitStats(st.sym);
+
+  box.innerHTML = `
+    <h2>${st.name} <span class="tk">${st.sym}</span></h2>
+    <div class="meta">${fmtPx(q.price,st.krw)} · ${chgTxt(q.changePercentage)} · 52주 ${fmtPx(q.yearLow,st.krw)} ~ ${fmtPx(q.yearHigh,st.krw)}</div>
+    <div class="totalrow"><span class="totalnum">${sc}<span style="font-size:15px;color:var(--sub)">/100</span></span><span class="totaltag ${tagCls}">${lbl}</span></div>
+    <div class="hitline">실사용 적중률(이 종목): ${hs.n?`${hs.rate}% (${hs.n}건)`:'기록 부족'} · 아래 백테스트는 동일 규칙의 과거 성과입니다</div>
+    <div class="cols">
+      <div>
+        <div class="sectitle">신호 상세 (근거)</div>
+        <div id="sigs"></div>
+        <div class="sectitle">과거 백테스트 (동일 신호 규칙)</div>
+        <div class="bt" id="btbox"><div class="loading">과거 약 2년 데이터로 검증 중...</div></div>
+      </div>
+      <div>
+        <div class="sectitle">최근 주가 흐름 (약 2개월, 종가 + 볼린저)</div>
+        <div class="chartbox"><canvas id="pxchart"></canvas></div>
+        ${!st.krw?'<div class="sectitle">미 의회 거래 내역 (최근 공시)</div><div class="congress" id="congress"><div class="loading">조회 중...</div></div>':''}
+        <div class="sectitle">관련 뉴스 & AI 심리 분석</div>
+        ${st.newsProxy?`<div class="proxy">※ 한국 종목은 영문 뉴스가 없어 업황 대표주(${st.newsProxy.join(', ')}) 뉴스로 심리를 봅니다.</div>`:''}
+        <div id="newsbox">${st.newsProxy||!st.krw?'<div class="loading">뉴스 불러오는 중...</div>':'<div class="loading">이 종목은 적합한 뉴스 소스가 없습니다.</div>'}</div>
+      </div>
+    </div>`;
+
+  const sb = box.querySelector('#sigs');
+  const rows = [...sigs];
+  if (ai) rows.push({ t:'뉴스 심리 (AI)', v:ai.score, d:ai.summary });
+  for (const s of rows){
+    const cls = s.v>0?'up':(s.v<0?'down':'neutral');
+    const arrow = s.v>0?'▲':(s.v<0?'▼':'—');
+    sb.insertAdjacentHTML('beforeend',
+      `<div class="sig"><div><div class="t">${s.t}</div><div class="d">${s.d}</div></div><div class="v ${cls}">${arrow} ${s.v>0?'+':''}${s.v}</div></div>`);
+  }
+  if (!ai && (st.newsProxy || !st.krw)) sb.insertAdjacentHTML('beforeend','<div class="sig"><div><div class="t">뉴스 심리 (AI)</div><div class="d" id="aiwait">뉴스 분석 중...</div></div><div class="v neutral">—</div></div>');
+
+  if (hist && hist.length) drawChart(hist, st);
+  if (st.newsProxy || !st.krw) renderNews(st);
+  if (!st.krw) renderCongress(st);
+  runBacktest(st).then(r=>{ if (state.sel===st.sym) renderBacktest(st, r); })
+    .catch(e=>{ const el=document.getElementById('btbox'); if (el) el.innerHTML=`<div class="err">백테스트 실패: ${e.message}</div>`; });
+  renderGrid();
+}
+function drawChart(hist, st){
+  const ctx = document.getElementById('pxchart');
+  if (state.chart) state.chart.destroy();
+  const closes = hist.map(h=>h.close);
+  const up=[], low=[];
+  for (let i=0;i<closes.length;i++){ const b=boll(closes,i); up.push(b?b.up:null); low.push(b?b.low:null); }
+  state.chart = new Chart(ctx, {
+    type:'line',
+    data:{ labels:hist.map(h=>h.date.slice(5,10)),
+      datasets:[
+        { label:'종가', data:closes, borderColor:'#4a5cc5', backgroundColor:'rgba(74,92,197,.08)', fill:true, pointRadius:0, borderWidth:2, tension:.25 },
+        { label:'BB상단', data:up, borderColor:'rgba(217,56,67,.4)', borderDash:[4,4], pointRadius:0, borderWidth:1, fill:false },
+        { label:'BB하단', data:low, borderColor:'rgba(37,99,235,.4)', borderDash:[4,4], pointRadius:0, borderWidth:1, fill:false },
+      ]},
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+      scales:{ y:{ticks:{callback:v=> st.krw?(v/10000)+'만':v}}, x:{ticks:{maxTicksLimit:8}} } }
+  });
+}
+async function renderNews(st){
+  const nb = document.getElementById('newsbox');
+  if (!nb) return;
+  try {
+    if (!state.news[st.sym]){
+      const syms = st.newsProxy || [st.sym];
+      state.news[st.sym] = await call('news',{endpoint:'search-stock-news', symbols:syms, limit:6});
+    }
+    const items = state.news[st.sym];
+    if (!items||!items.length){ nb.innerHTML='<div class="loading">관련 뉴스가 없습니다.</div>'; return; }
+    nb.innerHTML = items.slice(0,4).map(n=>
+      `<div class="newsitem"><a href="${n.url}" target="_blank" rel="noopener">${n.title}</a><div class="m">${n.site} · ${n.publishedDate}</div></div>`).join('');
+    analyzeSentiment(st, items);
+  } catch(e){ nb.innerHTML=`<div class="err">뉴스 로딩 실패: ${e.message}</div>`; }
+}
+async function renderCongress(st){
+  const el = document.getElementById('congress');
+  if (!el) return;
+  try {
+    if (!state.congress[st.sym])
+      state.congress[st.sym] = await call('senate',{endpoint:'senate-trading', symbol:st.sym, limit:4});
+    const items = state.congress[st.sym];
+    if (!items||!items.length){ el.innerHTML='<div class="loading">최근 공시 없음</div>'; return; }
+    el.innerHTML = items.slice(0,4).map(t=>{
+      const buy = /purchase/i.test(t.type);
+      return `<div><b class="${buy?'up':'down'}">${buy?'매수':'매도'}</b> ${t.firstName} ${t.lastName} (${t.district}) · ${t.amount} · 거래일 ${t.transactionDate}</div>`;
+    }).join('');
+  } catch(e){ el.innerHTML=`<div class="err">조회 실패</div>`; }
+}
+async function analyzeSentiment(st, items){
+  if (state.ai[st.sym]) return;
+  try {
+    const data = items.slice(0,6).map(n=>`[${n.publishedDate}] ${n.title} — ${(n.text||'').slice(0,200)}`).join('\n');
+    const resp = await window.cowork.askClaude(
+      `다음은 ${st.name}${st.newsProxy?' 관련 업황(반도체)':''} 최신 뉴스입니다. 주가 관점에서 심리를 평가하세요. 반드시 JSON만 출력: {"score": -1과 1 사이 숫자, "summary": "한국어 2~3문장 요약"}`, [data]);
+    const m = String(resp).match(/\{[\s\S]*\}/);
+    const parsed = m?JSON.parse(m[0]):null;
+    if (parsed && typeof parsed.score==='number'){
+      parsed.score = Math.max(-1, Math.min(1, Math.round(parsed.score*10)/10));
+      state.ai[st.sym] = parsed;
+      if (state.sel===st.sym) renderDetail();
+      saveToday();
+    } else { const w=document.getElementById('aiwait'); if (w) w.textContent='AI 분석 결과 해석 실패'; }
+  } catch(e){ const w=document.getElementById('aiwait'); if (w) w.textContent='AI 분석 실패: '+e.message; }
+}
+function select(sym){
+  state.sel = sym;
+  try { localStorage.setItem('semi_sel', sym); } catch(e){}
+  renderDetail();
+  document.getElementById('detail').scrollIntoView?.({behavior:'smooth', block:'nearest'});
+}
+function recomputeAll(){
+  for (const st of STOCKS){
+    if (!state.quotes[st.sym]) continue;
+    state.scores[st.sym] = totalScore(engine(liveCtx(st)), state.ai[st.sym]?state.ai[st.sym].score:null);
+  }
+}
+function setUpdated(){
+  document.getElementById('updated').textContent = '기준: '+new Date().toLocaleString('ko-KR')+' · 카드를 누르면 근거·백테스트·수급 정보를 볼 수 있어요 · 미국 종목은 장 마감 후 전일 종가 기준';
+}
+async function fetchQuotes(){
+  const syms = STOCKS.map(s=>s.sym).concat(['^KS11','SOXX','^VIX','USDKRW']);
+  const arr = await call('quote',{endpoint:'batch-quote', symbols:syms});
+  for (const q of arr) state.quotes[q.symbol] = q;
+  state.macro.vix = state.quotes['^VIX']||null;
+  state.macro.usdkrw = state.quotes['USDKRW']||null;
+}
+function insiderSignal(stats){
+  if (!stats||!stats.length) return null;
+  const s = [...stats].sort((a,b)=> (b.year-a.year)||(b.quarter-a.quarter));
+  let q = s[0];
+  if ((q.acquiredTransactions+q.disposedTransactions)<3 && s[1]) q = s[1];
+  const ratio = q.acquiredDisposedRatio||0;
+  let v=0;
+  if (q.totalPurchases>0 && q.totalPurchases>=q.totalSales) v=0.5;
+  else if (ratio>=1) v=0.25;
+  else if (q.totalSales>=20 && q.totalPurchases===0) v=-0.25;
+  return { v, d:`${q.year}Q${q.quarter}: 내부자 취득 ${q.acquiredTransactions}건 / 처분 ${q.disposedTransactions}건 (순수 장내매수 ${q.totalPurchases}건, 매도 ${q.totalSales}건) — ${v>0?'매수 우위, 긍정적':(v<0?'대량 처분 지속':'통상 수준 (임원 보상 매도 포함)')}` };
+}
+
+// ── 초기 로드 ──
+async function init(){
+  try { await fetchQuotes(); }
+  catch(e){ document.getElementById('grid').innerHTML=`<div class="err">시세 로딩 실패: ${e.message}</div>`; return; }
+  setUpdated(); renderMacro(); renderGrid();
+
+  const from70 = daysAgo(70), to = tomorrow(), from14 = daysAgo(14), from4 = daysAgo(4);
+  const tasks = [];
+  // 매크로: 국채금리 + 섹터
+  tasks.push((async()=>{
+    try {
+      const tr = await call('economics',{endpoint:'treasury-rates', from_date:daysAgo(9), to_date:to});
+      if (tr&&tr.length){ state.macro.t10 = tr[0].year10; state.macro.t10d5 = tr[Math.min(4,tr.length-1)].year10; }
+    } catch(e){}
+    for (let k=1;k<=4;k++){
+      try {
+        const sp = await call('marketPerformance',{endpoint:'sector-performance-snapshot', date:daysAgo(k), exchange:'NASDAQ'});
+        const t = (sp||[]).find(x=>x.sector==='Technology');
+        if (t){ state.macro.tech = t.averageChange; break; }
+      } catch(e){ break; }
+    }
+    renderMacro();
+  })());
+  // 종목별: RSI(일봉) + ADX + 1시간봉 RSI
+  for (const st of STOCKS) tasks.push((async()=>{
+    try {
+      const arr = await call('technicalIndicators',{endpoint:'relative-strength-index', symbol:st.sym, periodLength:14, timeframe:'1day', from_date:from70, to_date:to});
+      arr.sort((a,b)=> a.date<b.date?-1:1); state.hist[st.sym]=arr;
+    } catch(e){ state.hist[st.sym]=null; }
+    try {
+      const arr = await call('technicalIndicators',{endpoint:'average-directional-index', symbol:st.sym, periodLength:14, timeframe:'1day', from_date:from14, to_date:to});
+      arr.sort((a,b)=> a.date<b.date?-1:1); state.adx[st.sym]=arr.length?arr[arr.length-1].adx:null;
+    } catch(e){ state.adx[st.sym]=null; }
+    try {
+      const arr = await call('technicalIndicators',{endpoint:'relative-strength-index', symbol:st.sym, periodLength:14, timeframe:'1hour', from_date:from4, to_date:to});
+      arr.sort((a,b)=> a.date<b.date?-1:1); state.intraday[st.sym]=arr.length?arr[arr.length-1].rsi:null;
+    } catch(e){ state.intraday[st.sym]=null; }
+    if (!st.krw){
+      try { state.insider[st.sym] = insiderSignal(await call('insiderTrades',{endpoint:'insider-trade-statistics', symbol:st.sym})); }
+      catch(e){ state.insider[st.sym]=null; }
+    } else state.insider[st.sym]=null;
+  })());
+  // 벤치마크 이력
+  for (const b of ['^KS11','SOXX']) tasks.push((async()=>{
+    try {
+      const arr = await call('technicalIndicators',{endpoint:'relative-strength-index', symbol:b, periodLength:14, timeframe:'1day', from_date:from70, to_date:to});
+      arr.sort((a,b2)=> a.date<b2.date?-1:1); state.benchHist[b]=arr;
+    } catch(e){ state.benchHist[b]=null; }
+  })());
+  await Promise.all(tasks);
+
+  recomputeAll(); renderGrid(); renderHitChip(); renderPortfolio(); saveToday();
+  let sel=null; try { sel=localStorage.getItem('semi_sel'); } catch(e){}
+  state.sel = (sel && STOCKS.some(s=>s.sym===sel))?sel:STOCKS[0].sym;
+  renderDetail();
+
+  setInterval(async ()=>{
+    try {
+      await fetchQuotes();
+      recomputeAll(); setUpdated(); renderMacro(); renderGrid(); renderHitChip(); renderPortfolio(); saveToday();
+      if (state.sel) renderDetail();
+    } catch(e){}
+  }, 5*60*1000);
+}
+init();
+</script>
+</body>
+</html>
